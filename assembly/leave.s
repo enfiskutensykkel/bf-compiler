@@ -1,5 +1,7 @@
 movb	(%rbp, %rdx)	,	%al
-movq	%rbx		,	%rsp
+movq	%rbx		    ,	%rsp
+popq    %rdi
+popq	%rsi
 popq	%rbp
 popq	%rbx
 retq
