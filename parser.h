@@ -6,6 +6,6 @@
 
 
 /* Pass through the input file and create a string of tokens */
-size_t tokenize_file(FILE* input_file, struct token** token_string);
+int tokenize_file(FILE* input_file, struct token** token_string);
 
 #endif

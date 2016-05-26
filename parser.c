@@ -53,11 +53,13 @@ static struct token* get_next_token(FILE* stream)
 }
 
 
-size_t tokenize_file(FILE* input_file, struct token** token_string)
+int tokenize_file(FILE* input_file, struct token** token_string)
 {
     struct token* prev_token = NULL;
     struct token* curr_token = NULL;
     size_t num_tokens = 0;
+
+    int loop_stack = 0;
 
     while ((curr_token = get_next_token(input_file)) != NULL)
     {
@@ -71,8 +73,41 @@ size_t tokenize_file(FILE* input_file, struct token** token_string)
             prev_token = curr_token;
         }
 
+        switch (curr_token->symbol)
+        {
+            case LOOP_BEGIN:
+                if (++loop_stack >= MAX_NESTED_LOOPS)
+                {
+                    fprintf(stderr, "Excessive loop nesting\n");
+                    return -1;
+                }
+                break;
+
+            case LOOP_END:
+                if (--loop_stack < 0)
+                {
+                    fprintf(stderr, "Loop token mismatch (open)\n");
+                    return -2;
+                }
+                break;
+
+            default:
+                break;
+        }
+
         ++num_tokens;
     }
 
-    return num_tokens;
+    if (loop_stack != 0)
+    {
+        fprintf(stderr, "Loop token mismatch (close)\n");
+        return -2;
+    }
+    else if (num_tokens == 0)
+    {
+        fprintf(stderr, "No tokens found\n");
+        return -3;
+    }
+
+    return 0;
 }

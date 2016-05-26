@@ -51,15 +51,15 @@ int main(int argc, char** argv)
         fprintf(stderr, "Could not open file for read: %s\n", argv[1]);
         return errno;
     }
-    size_t num_tokens = tokenize_file(stream, &token_string); // TODO rewrite so it returns status instead
-    fclose(stream);
 
-    // Check if there's actually anything to compile
-    if (num_tokens == 0)
+    status = tokenize_file(stream, &token_string);
+    if (status < 0)
     {
-        fprintf(stderr, "Empty source file: %s\n", argv[1]);
-        return 3;
+        fclose(stream);
+        fprintf(stderr, "Invalid source file\n");
+        return -status;
     }
+    fclose(stream);
 
     // Compile tokens to bytecode
     status = compile(token_string, &page_list, PAGE_SIZE, DATA_ADDR, TEXT_ADDR);
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
         free_page_list(page_list);
         free_token_string(token_string);
         fprintf(stderr, "Failed to compile to byte code\n");
-        return status;
+        return -status;
     }
 
     // Open output file for writing Mach-O executable
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
         free_page_list(page_list);
         free_token_string(token_string);
         fprintf(stderr, "Could not write to executable\n");
-        return status;
+        return -status;
     }
 
     fclose(stream);
