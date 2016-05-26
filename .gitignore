@@ -38,3 +38,6 @@ bfc
 *.bf
 *.b
 !examples/*.bf
+
+# Backup files
+.*.swp
