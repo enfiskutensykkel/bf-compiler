@@ -56,7 +56,7 @@ static uint32_t calculate_loop_offset(const struct token* token, uint32_t offset
     {
         case INCR_CELL:
         case DECR_CELL:
-            offset += 2;
+            offset += 3;
             break;
 
         case INCR_DATA:
@@ -129,13 +129,13 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
         switch (token_string->symbol)
         {
             case INCR_CELL:
-                addr += 2;
-                curr_page = add_to_page(curr_page, page_size, 2, "\xfe\xc2");
+                addr += 3;
+                curr_page = add_to_page(curr_page, page_size, 3, "\x66\xff\xc2");
                 break;
 
             case DECR_CELL:
-                addr += 2;
-                curr_page = add_to_page(curr_page, page_size, 2, "\xfe\xca");
+                addr += 3;
+                curr_page = add_to_page(curr_page, page_size, 3, "\x66\xff\xca");
                 break;
 
             case INCR_DATA:

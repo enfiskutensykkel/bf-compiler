@@ -1,1 +1,1 @@
-incb	%dl
+incw	%dx

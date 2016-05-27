@@ -1,1 +1,1 @@
-decb	%dl
+decw	%dx
