@@ -187,7 +187,7 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
 
             case READ_DATA:
                 curr_page = add_to_page(curr_page, page_size, 32,
-                        "\x48\xc7\xc0\x03\x00\x00\x02\x48\xc7\xc7\x01\x00\x00\x00\x48\x8d"
+                        "\x48\xc7\xc0\x03\x00\x00\x02\x48\xc7\xc7\x00\x00\x00\x00\x48\x8d"
                         "\x74\x15\x00\x55\x52\x48\xc7\xc2\x01\x00\x00\x00\x0f\x05\x5a\x5d"
                         );
                 addr += 32;
