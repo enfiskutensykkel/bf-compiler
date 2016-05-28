@@ -96,7 +96,7 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
     struct page* curr_page = alloc_page(NULL, page_size);
     *page_list = curr_page;
 
-    char byte_code[16];
+    char byte_code[8];
     uint32_t addr = 0;
     uint32_t offset = 0;
 
@@ -129,26 +129,48 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
         switch (token_string->symbol)
         {
             case INCR_CELL:
+                /*
+                 *  incw    %dx
+                 */
                 addr += 3;
                 curr_page = add_to_page(curr_page, page_size, 3, "\x66\xff\xc2");
                 break;
 
             case DECR_CELL:
+                /*
+                 *  decw    %dx
+                 */
                 addr += 3;
                 curr_page = add_to_page(curr_page, page_size, 3, "\x66\xff\xca");
                 break;
 
             case INCR_DATA:
+                /*
+                 *  movb    (%rbp, %rdx) ,   %al
+                 *  incb    %al
+                 *  movb    %al          ,   (%rbp, %rdx)
+                 */
                 addr += 10;
                 curr_page = add_to_page(curr_page, page_size, 10, "\x8a\x44\x15\x00\xfe\xc0\x88\x44\x15\x00");
                 break;
 
             case DECR_DATA:
+                /*
+                 *  movb    (%rbp, %rdx) ,   %al
+                 *  decb    %al
+                 *  movb    %al          ,   (%rbp, %rdx)
+                 */
                 addr += 10;
                 curr_page = add_to_page(curr_page, page_size, 10, "\x8a\x44\x15\x00\xfe\xc8\x88\x44\x15\x00");
                 break;
 
             case LOOP_BEGIN:
+                /*
+                 *  movb    (%rbp, %rdx) ,  %al
+                 *  cmpb    $0           ,  %al
+                 *  je      <calculated address>
+                 *
+                 */
                 addr_stack[stack_pos++] = addr;
                 addr += 12;
 
@@ -163,6 +185,9 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                 break;
 
             case LOOP_END:
+                /*
+                 *  jump    <address of comparison>
+                 */
                 offset = addr_stack[--stack_pos];
 
                 byte_code[0] = 0xe9;
@@ -174,6 +199,17 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                 break;
 
             case WRITE_DATA:
+                /*
+                 *  movq    $0x2000004   ,  %rax    # 4 = syscall write, 2000000 = UNIX/BSD mask
+                 *  movq    $1           ,  %rdi    # file number 1 = stdout
+                 *  leaq    (%rbp, %rdx) ,  %rsi    # move address of cell we're going to print
+                 *  pushq   %rbp                    # save register
+                 *  pushq   %rdx                    # save register
+                 *  movq    $1           ,  %rdx    # how many bytes
+                 *  syscall
+                 *  popq    %rdx
+                 *  popq    %rbp
+                 */
                 addr += 32;
                 curr_page = add_to_page(curr_page, page_size, 32,
                         "\x48\xc7\xc0\x04\x00\x00\x02\x48\xc7\xc7\x01\x00\x00\x00\x48\x8d"
@@ -182,6 +218,17 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                 break;
 
             case READ_DATA:
+                /*
+                 *  movq    $0x2000004   ,  %rax    # 3 = syscall read, 2000000 = UNIX/BSD mask
+                 *  movq    $0           ,  %rdi    # file number 1 = stdin
+                 *  leaq    (%rbp, %rdx) ,  %rsi    # move address of cell we're going to print
+                 *  pushq   %rbp                    # save register
+                 *  pushq   %rdx                    # save register
+                 *  movq    $1           ,  %rdx    # how many bytes
+                 *  syscall
+                 *  popq    %rdx
+                 *  popq    %rbp
+                 */
                 addr += 32;
                 curr_page = add_to_page(curr_page, page_size, 32,
                         "\x48\xc7\xc0\x03\x00\x00\x02\x48\xc7\xc7\x00\x00\x00\x00\x48\x8d"
