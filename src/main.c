@@ -61,8 +61,15 @@ int main(int argc, char** argv)
     }
     fclose(stream);
 
+    status = parse(token_string);
+    if (status < 0)
+    {
+        fprintf(stderr, "Syntax error\n");
+        return -status;
+    }
+
     // Compile tokens to bytecode
-    status = compile(token_string, &page_list, PAGE_SIZE, DATA_ADDR, TEXT_ADDR);
+    status = compile(token_string, &page_list, PAGE_SIZE, DATA_ADDR);
     if (status < 0)
     {
         free_page_list(page_list);

@@ -9,4 +9,7 @@
 int tokenize_file(FILE* input_file, struct token** token_string);
 
 
+/* Pass through the string of tokens and build the parse tree */
+int parse(struct token* token_string);
+
 #endif

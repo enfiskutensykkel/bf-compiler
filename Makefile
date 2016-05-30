@@ -7,16 +7,14 @@ HEADERS := $(wildcard src/*.h)
 
 OBJECTS := $(SOURCES:%.c=%.o)
 
+.PHONY: $(PROJECT) all clean debug
 
-.PHONY: bin/$(PROJECT) all clean debug
-
-all: bin/$(PROJECT)
+all: $(PROJECT)
 
 clean:
 	-$(RM) $(PROJECT) $(OBJECTS)
 
-bin/$(PROJECT): $(OBJECTS)
-	-mkdir -p $(@D)
+$(PROJECT): $(OBJECTS)
 	$(CC) -o $@ $^
 
 debug: CFLAGS += -DDEBUG -g

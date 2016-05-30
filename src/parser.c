@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "token.h"
 #include "parser.h"
 
@@ -15,6 +16,7 @@ static struct token* create_token(enum symbol command, size_t size)
         return NULL;
     }
 
+    memset(token, 0, size);
     token->symbol = command;
     token->next = NULL;
     token->size = size;
@@ -31,18 +33,16 @@ static struct token* get_next_token(FILE* stream)
     {
         switch (byte)
         {
-            case INCR_CELL:
-            case DECR_CELL:
-                return create_token((enum symbol) byte, sizeof(struct move_pointer));
-
             case INCR_DATA:
             case DECR_DATA:
                 return create_token((enum symbol) byte, sizeof(struct modify_data));
 
             case LOOP_BEGIN:
+            case LOOP_END:
                 return create_token((enum symbol) byte, sizeof(struct loop));
 
-            case LOOP_END:
+            case INCR_CELL:
+            case DECR_CELL:
             case WRITE_DATA:
             case READ_DATA:
                 return create_token((enum symbol) byte, sizeof(struct token));
@@ -61,9 +61,6 @@ int tokenize_file(FILE* input_file, struct token** token_string)
 {
     struct token* prev_token = NULL;
     struct token* curr_token = NULL;
-    size_t num_tokens = 0;
-
-    int loop_stack = 0;
 
     while ((curr_token = get_next_token(input_file)) != NULL)
     {
@@ -76,22 +73,96 @@ int tokenize_file(FILE* input_file, struct token** token_string)
             prev_token->next = curr_token;
             prev_token = curr_token;
         }
+    }
 
+    if (prev_token == NULL)
+    {
+        fprintf(stderr, "No tokens found\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+
+static struct token* find_loop_end(struct token* token, size_t loop_stack)
+{
+    if (token == NULL)
+    {
+        return NULL;
+    }
+
+    switch (token->symbol)
+    {
+        case LOOP_BEGIN:
+            if (++loop_stack >= MAX_NESTED_LOOPS)
+            {
+                return NULL;
+            }
+            break;
+
+        case LOOP_END:
+            if (--loop_stack == 0)
+            {
+                return token;
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    return find_loop_end(token->next, loop_stack);
+}
+
+
+int parse(struct token* token_string)
+{
+    struct token* curr_token = token_string;
+    int nest_count = 0;
+    int modified = 0;
+    
+    while (curr_token != NULL)
+    {
         switch (curr_token->symbol)
         {
+            case INCR_DATA:
+            case DECR_DATA:
+                ((struct modify_data*) curr_token)->load = !modified;
+                ((struct modify_data*) curr_token)->store = 0;
+                modified = 1;
+
+                if (curr_token->next == NULL || curr_token->next->symbol != curr_token->symbol)
+                {
+                    ((struct modify_data*) curr_token)->store = 1;
+                    modified = 0;
+                }
+                break;
+
             case LOOP_BEGIN:
-                if (++loop_stack >= MAX_NESTED_LOOPS)
+                if (++nest_count >= MAX_NESTED_LOOPS)
                 {
                     fprintf(stderr, "Excessive loop nesting\n");
                     return -1;
                 }
+
+                ((struct loop*) curr_token)->match = find_loop_end(curr_token, 0);
+
+                if (((struct loop*) curr_token)->match == NULL)
+                {
+                    fprintf(stderr, "Matching ']' not found, searched past end of file\n");
+                    return -2;
+                }
+
+                ((struct loop*) ((struct loop*) curr_token)->match)->match = curr_token;
+
                 break;
 
             case LOOP_END:
-                if (--loop_stack < 0)
+                if (--nest_count < 0 || ((struct loop*) curr_token)->match == NULL)
                 {
-                    fprintf(stderr, "Loop token mismatch (open)\n");
-                    return -2;
+                    fprintf(stderr, "Rogue ']'\n");
+                    return -3;
                 }
                 break;
 
@@ -99,20 +170,8 @@ int tokenize_file(FILE* input_file, struct token** token_string)
                 break;
         }
 
-        ++num_tokens;
-    }
-
-    if (loop_stack != 0)
-    {
-        fprintf(stderr, "Loop token mismatch (close)\n");
-        return -2;
-    }
-    else if (num_tokens == 0)
-    {
-        fprintf(stderr, "No tokens found\n");
-        return -3;
+        curr_token = curr_token->next;
     }
 
     return 0;
 }
-

@@ -61,7 +61,17 @@ static uint32_t calculate_loop_offset(const struct token* token, uint32_t offset
 
         case INCR_DATA:
         case DECR_DATA:
-            offset += 10;
+            if (((const struct modify_data*) token)->load)
+            {
+                offset += 4;
+            }
+
+            offset += 2;
+
+            if (((const struct modify_data*) token)->store)
+            {
+                offset += 4;
+            }
             break;
 
         case WRITE_DATA:
@@ -91,7 +101,7 @@ static uint32_t calculate_loop_offset(const struct token* token, uint32_t offset
 }
 
 
-int compile(const struct token* token_string, struct page** page_list, size_t page_size, uint64_t data_addr, uint64_t text_addr)
+int compile(const struct token* token_string, struct page** page_list, size_t page_size, uint64_t data_addr)
 {
     struct page* curr_page = alloc_page(NULL, page_size);
     *page_list = curr_page;
@@ -146,22 +156,46 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
 
             case INCR_DATA:
                 /*
-                 *  movb    (%rbp, %rdx) ,   %al
-                 *  incb    %al
-                 *  movb    %al          ,   (%rbp, %rdx)
+                 *  movb    (%rbp, %rdx) ,   %al            # load
+                 *  incb    %al                             # increment
+                 *  movb    %al          ,   (%rbp, %rdx)   # store
                  */
-                addr += 10;
-                curr_page = add_to_page(curr_page, page_size, 10, "\x8a\x44\x15\x00\xfe\xc0\x88\x44\x15\x00");
+                if (((const struct modify_data*) token_string)->load)
+                {
+                    addr += 4;
+                    curr_page = add_to_page(curr_page, page_size, 4, "\x8a\x44\x15\x00");
+                }
+
+                addr += 2;
+                curr_page = add_to_page(curr_page, page_size, 2, "\xfe\xc0");
+
+                if (((const struct modify_data*) token_string)->store)
+                {
+                    addr += 4;
+                    curr_page = add_to_page(curr_page, page_size, 4, "\x88\x44\x15\x00");
+                }
                 break;
 
             case DECR_DATA:
                 /*
-                 *  movb    (%rbp, %rdx) ,   %al
-                 *  decb    %al
-                 *  movb    %al          ,   (%rbp, %rdx)
+                 *  movb    (%rbp, %rdx) ,   %al            # load
+                 *  decb    %al                             # decrement
+                 *  movb    %al          ,   (%rbp, %rdx)   # store
                  */
-                addr += 10;
-                curr_page = add_to_page(curr_page, page_size, 10, "\x8a\x44\x15\x00\xfe\xc8\x88\x44\x15\x00");
+                if (((const struct modify_data*) token_string)->load)
+                {
+                    addr += 4;
+                    curr_page = add_to_page(curr_page, page_size, 4, "\x8a\x44\x15\x00");
+                }
+
+                addr += 2;
+                curr_page = add_to_page(curr_page, page_size, 2, "\xfe\xc8");
+
+                if (((const struct modify_data*) token_string)->store)
+                {
+                    addr += 4;
+                    curr_page = add_to_page(curr_page, page_size, 4, "\x88\x44\x15\x00");
+                }
                 break;
 
             case LOOP_BEGIN:

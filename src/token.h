@@ -24,22 +24,9 @@ enum symbol
  */
 struct token
 {
-    enum symbol     symbol; // which symbol this token represents
-    struct token*   next;   // pointer to the following symbol
-    size_t          size;   // total size of the token structure
-};
-
-
-/* Move cell pointer token
- *
- * Sub-class of struct token. Used to represent '<' or '>' commands.
- */
-struct move_pointer
-{
-    enum symbol     symbol; // either '<' or '>'
-    struct token*   next;   // pointer to succeeding token
-    size_t          size;   // sizeof(struct move_pointer)
-    int             store;  // indicates that a memory store must preceed the pointer move
+    enum symbol    symbol; // which symbol this token represents
+    struct token*  next;   // pointer to the following symbol
+    size_t         size;   // total size of the token structure
 };
 
 
@@ -49,10 +36,11 @@ struct move_pointer
  */
 struct modify_data
 {
-    enum symbol     symbol; // either '+' or '-'
-    struct token*   next;   // pointer to succeeding token
-    size_t          size;   // sizeof(struct modify_data)
-    int             load;   // indicates that a memory load must preceed the data modification
+    enum symbol    symbol; // either '+' or '-'
+    struct token*  next;   // pointer to succeeding token
+    size_t         size;   // sizeof(struct modify_data)
+    int            load;   // indicates that a memory load must preceed the data modification
+    int            store;  // indicates that a memory store must succeed the data modification
 };
 
 
@@ -65,7 +53,7 @@ struct loop
     enum symbol     symbol; // '['
     struct token*   next;   // pointer to succeeding token
     size_t          size;   // sizeof(struct loop)
-    struct token*   end;    // pointer to the matching ']' token
+    struct token*   match;  // pointer to the matching ']' token
 };
 
 #endif
