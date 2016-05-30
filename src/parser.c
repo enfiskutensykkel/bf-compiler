@@ -1,18 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "token.h"
 #include "parser.h"
 
 
-static struct token* create_token(enum symbol symbol)
+static struct token* create_token(enum symbol command, size_t size)
 {
-    struct token* token = (struct token*) malloc(sizeof(struct token));
-    
-    if (token != NULL)
+    struct token* token = (struct token*) malloc(size);
+
+    if (token == NULL)
     {
-        token->symbol = symbol;
-        token->next = NULL;
+        fprintf(stderr, "Out of memory\n");
+        return NULL;
     }
+
+    token->symbol = command;
+    token->next = NULL;
+    token->size = size;
 
     return token;
 }
@@ -21,7 +26,6 @@ static struct token* create_token(enum symbol symbol)
 static struct token* get_next_token(FILE* stream)
 {
     int byte;
-    struct token* token;
 
     while ((byte = fgetc(stream)) != -1)
     {
@@ -29,19 +33,19 @@ static struct token* get_next_token(FILE* stream)
         {
             case INCR_CELL:
             case DECR_CELL:
+                return create_token((enum symbol) byte, sizeof(struct move_pointer));
+
             case INCR_DATA:
             case DECR_DATA:
+                return create_token((enum symbol) byte, sizeof(struct modify_data));
+
             case LOOP_BEGIN:
+                return create_token((enum symbol) byte, sizeof(struct loop));
+
             case LOOP_END:
             case WRITE_DATA:
             case READ_DATA:
-                token = create_token((enum symbol) byte);
-                if (token == NULL)
-                {
-                    fprintf(stderr, "Out of memory\n");
-                    return NULL;
-                }
-                return token;
+                return create_token((enum symbol) byte, sizeof(struct token));
 
             default:
                 // do nothing
