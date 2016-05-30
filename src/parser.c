@@ -87,39 +87,37 @@ int tokenize_file(FILE* input_file, struct token** token_string)
 
 static struct token* find_loop_end(struct token* token, size_t loop_stack)
 {
-    if (token == NULL)
+    while (token != NULL)
     {
-        return NULL;
+        switch (token->symbol)
+        {
+            case LOOP_BEGIN:
+                ++loop_stack;
+                break;
+
+            case LOOP_END:
+                if (--loop_stack == 0)
+                {
+                    return token;
+                }
+                break;
+
+            default:
+                // do nothing
+                break;
+        }
+
+        token = token->next;
     }
 
-    switch (token->symbol)
-    {
-        case LOOP_BEGIN:
-            if (++loop_stack >= MAX_NESTED_LOOPS)
-            {
-                return NULL;
-            }
-            break;
-
-        case LOOP_END:
-            if (--loop_stack == 0)
-            {
-                return token;
-            }
-            break;
-
-        default:
-            break;
-    }
-
-    return find_loop_end(token->next, loop_stack);
+    return NULL;
 }
 
 
 int parse(struct token* token_string)
 {
     struct token* curr_token = token_string;
-    int nest_count = 0;
+    int64_t nest_count = 0;
     int modified = 0;
     
     while (curr_token != NULL)
@@ -140,7 +138,7 @@ int parse(struct token* token_string)
                 break;
 
             case LOOP_BEGIN:
-                if (++nest_count >= MAX_NESTED_LOOPS)
+                if (++nest_count >= INT64_MAX)
                 {
                     fprintf(stderr, "Excessive loop nesting\n");
                     return -1;
@@ -155,7 +153,6 @@ int parse(struct token* token_string)
                 }
 
                 ((struct loop*) ((struct loop*) curr_token)->match)->match = curr_token;
-
                 break;
 
             case LOOP_END:

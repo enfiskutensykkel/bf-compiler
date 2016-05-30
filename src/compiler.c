@@ -50,9 +50,9 @@ static struct page* add_to_page(struct page* page, size_t page_size, size_t leng
 }
 
 
-static uint32_t calculate_loop_offset(const struct token* token, uint32_t offset, size_t stack_pos)
+static uint32_t calculate_loop_offset(const struct token* begin, const struct token* end, uint32_t offset)
 {
-    switch (token->symbol)
+    switch (begin->symbol)
     {
         case INCR_CELL:
         case DECR_CELL:
@@ -61,14 +61,14 @@ static uint32_t calculate_loop_offset(const struct token* token, uint32_t offset
 
         case INCR_DATA:
         case DECR_DATA:
-            if (((const struct modify_data*) token)->load)
+            if (((const struct modify_data*) begin)->load)
             {
                 offset += 4;
             }
 
             offset += 2;
 
-            if (((const struct modify_data*) token)->store)
+            if (((const struct modify_data*) begin)->store)
             {
                 offset += 4;
             }
@@ -83,21 +83,21 @@ static uint32_t calculate_loop_offset(const struct token* token, uint32_t offset
             break;
 
         case LOOP_BEGIN:
-            ++stack_pos;
             offset += 6 + 2 + 4;
             break;
 
         case LOOP_END:
             offset += 1 + 4; 
-            if (--stack_pos == 0)
-            {
-                return offset;
-            }
             break;
     }
 
+    if (begin == end)
+    {
+        return offset;
+    }
+
     // Don't check for NULL here because the parser should have already matched all loops
-    return calculate_loop_offset(token->next, offset, stack_pos);
+    return calculate_loop_offset(begin->next, end, offset);
 }
 
 
@@ -109,9 +109,6 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
     char byte_code[8];
     uint32_t addr = 0;
     uint32_t offset = 0;
-
-    uint32_t addr_stack[MAX_NESTED_LOOPS];
-    size_t stack_pos = 0;
 
     /* Save stack frame and point registers to data
      *
@@ -132,7 +129,6 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
     curr_page = add_to_page(curr_page, page_size, 12,"\x53\x55\x56\x57\x48\x89\xe3\x48\x31\xc0\x48\xbd");
     curr_page = add_to_page(curr_page, page_size, 8, (char*) &data_addr);
     curr_page = add_to_page(curr_page, page_size, 7, "\x48\xc7\xc2\x00\x00\x00\x00");
-    data_addr += 12 + 8 + 7;
 
     while (token_string != NULL && curr_page != NULL)
     {
@@ -205,16 +201,14 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                  *  je      <calculated address>
                  *
                  */
-                addr_stack[stack_pos++] = addr;
-                addr += 12;
-
-                offset = calculate_loop_offset(token_string, 0, 0) - 12;
-                curr_page = add_to_page(curr_page, page_size, 6, "\x8a\x44\x15\x00\x3c\x00");
+                offset = calculate_loop_offset(token_string->next, ((const struct loop*) token_string)->match, 0);
 
                 byte_code[0] = 0x0f;
                 byte_code[1] = 0x84;
                 *((uint32_t*) (byte_code + 2)) = offset;
 
+                addr += 12;
+                curr_page = add_to_page(curr_page, page_size, 6, "\x8a\x44\x15\x00\x3c\x00");
                 curr_page = add_to_page(curr_page, page_size, 6, byte_code);
                 break;
 
@@ -222,10 +216,10 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                 /*
                  *  jump    <address of comparison>
                  */
-                offset = addr_stack[--stack_pos];
+                offset = calculate_loop_offset(((const struct loop*) token_string)->match->next, token_string, 0);
 
                 byte_code[0] = 0xe9;
-                *((uint32_t*) (byte_code + 1)) = offset - addr - 5;
+                *((uint32_t*) (byte_code + 1)) = -offset - 12;
 
                 curr_page = add_to_page(curr_page, page_size, 5, byte_code);
                 addr += 5;
