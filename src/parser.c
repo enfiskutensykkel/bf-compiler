@@ -111,3 +111,4 @@ int tokenize_file(FILE* input_file, struct token** token_string)
 
     return 0;
 }
+

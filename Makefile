@@ -2,20 +2,21 @@ PROJECT := bfc
 CFLAGS  := -std=c11 -Wall -Wextra -pedantic -DDATA_ADDR=0x1000000000 -DTEXT_ADDR=0x1000010000 -DPAGE_SIZE=0x1000 -DMAX_NESTED_LOOPS=0x1000
 CC	:= clang
 
-SOURCES := main.c parser.c compiler.c macho.c
-HEADERS := parser.h token.h compiler.h page.h macho.h
+SOURCES := $(wildcard src/*.c)
+HEADERS := $(wildcard src/*.h)
 
 OBJECTS := $(SOURCES:%.c=%.o)
 
 
-.PHONY: $(PROJECT) all clean debug
+.PHONY: bin/$(PROJECT) all clean debug
 
-all: $(PROJECT)
+all: bin/$(PROJECT)
 
 clean:
-	-rm $(PROJECT) $(OBJECTS)
+	-$(RM) $(PROJECT) $(OBJECTS)
 
-$(PROJECT): $(OBJECTS)
+bin/$(PROJECT): $(OBJECTS)
+	-mkdir -p $(@D)
 	$(CC) -o $@ $^
 
 debug: CFLAGS += -DDEBUG -g
