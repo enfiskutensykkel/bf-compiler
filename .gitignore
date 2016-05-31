@@ -37,7 +37,6 @@ bfc
 # Brainfuck files
 *.bf
 *.b
-!examples/*.bf
 
 # Backup files
 .*.swp
