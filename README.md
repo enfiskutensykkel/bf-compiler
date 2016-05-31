@@ -1,5 +1,5 @@
 # Brainfuck compiler for Mac OS X
-
+=====================================================================================================================
 Compile Brainfuck programs to Mach-O executables for x86-64.
 
 
@@ -7,8 +7,8 @@ Compile Brainfuck programs to Mach-O executables for x86-64.
 TODO: version of Xcode, clang, and command-line-utils
 
 
-## Background: What is Brainfuck?
-
+## What is Brainfuck? -- Some background
+---------------------------------------------------------------------------------------------------------------------
 [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) is an extremely minimalistic, yet Turing-complete, programming
 language (so-called _esoteric_ programming language).  The main idea is to manipulate an array of **cells**, using
 simple commands. A cell is one byte, and the array consists of (at least) 30,000 cells.
@@ -19,7 +19,7 @@ and there are eight possible commands for moving the cell pointer, increasing/de
 I/O of the current cell and a simple loop structure. Non-command characters are just ignored.
 
 
-| Command | Action                                                                             | C equivalent        |
+| Command | Action                                                                             | Equivalent C code   |
 |---------|------------------------------------------------------------------------------------|---------------------|
 |   `>`   | Increment the cell pointer (move it to the right)                                  | `++ptr;`            |
 |   `<`   | Decrement the cell pointer (move it to the left)                                   | `--ptr;`            |
@@ -182,7 +182,9 @@ Step by step, this will look something like this:
    ptr
 ```
 
+
 ## The compiler -- How does it work?
+---------------------------------------------------------------------------------------------------------------------
 tokeniser
 parser
 compiler
@@ -198,6 +200,7 @@ TODO show table of mapping
 addl
 reduce load stores
 reduce push and pops
+skipping comment loops
 
 ### Creating a valid Mach-O executable
 TODO: header + load commands + file offset
@@ -205,18 +208,19 @@ TODO: stricter
 
 
 ## The executable image
-A compiled Brainfuck program will have the following layout when loaded into memory. The __PAGEZERO segment is used 
+---------------------------------------------------------------------------------------------------------------------
+A compiled Brainfuck program will have the following layout when loaded into memory. The `__PAGEZERO` segment is used 
 to catch null pointer exceptions; for our cause it's not really necessary, but as OS X has become stricter when 
 evaluating Mach-O executables, it is expected. The protection level for this segment is set to no access. 
 
-The __DATA segment and the __data section is empty on disk, but the load command for the section instructs the 
+The `__DATA` segment and the `__data` section is empty on disk, but the load command for the section instructs the 
 loader to reserve 2^16-1 bytes of memory for program data and to zero it out. There are two reasons for using a 
 2^16-1 sized cell array (rather than "just" the 30,000). Reason one is that it is easier to align, as it is 
 page-aligned. Reason two is that even though Brainfuck programs should not expect the array to be larger than 30,000
 cells, there are many that ignore this. In order to ensure that most Brainfuck programs would compile and run, 
 chose a size that was at least twice the minimum amount of cells.
 
-The __TEXT segment and the corresponding __text section contains the actual opcodes that is ran. There is no 
+The `__TEXT` segment and the corresponding `__text` section contains the actual opcodes that is ran. There is no 
 restrictions on how large this section can be, except that my implementation uses JUMP opcodes that accept a four 
 byte operand which means that it cannot be larger than 4 GB.
 
@@ -238,6 +242,7 @@ byte operand which means that it cannot be larger than 4 GB.
              |                     |
              +---------------------+
 ```
+
 
 
 
