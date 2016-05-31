@@ -1,13 +1,13 @@
-# Brainfuck compiler for Mac OS X
+Brainfuck compiler for Mac OS X
 =====================================================================================================================
 Compile Brainfuck programs to Mach-O executables for x86-64.
 
 
-## Technical requirements
+### Technical requirements ###
 TODO: version of Xcode, clang, and command-line-utils
 
 
-## What is Brainfuck? -- Some background
+What is Brainfuck? -- Some background
 ---------------------------------------------------------------------------------------------------------------------
 [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) is an extremely minimalistic, yet Turing-complete, programming
 language (so-called _esoteric_ programming language).  The main idea is to manipulate an array of **cells**, using
@@ -31,7 +31,7 @@ I/O of the current cell and a simple loop structure. Non-command characters are 
 |   `]`   | If the cell value is **not** zero, jump back to the command after the matching `[` | `}`                 |
 
 
-### Example program
+### Example program ###
 The following Brainfuck code adds 2 and 3
 ```brainfuck
 ++       set cell 0 to 2
@@ -183,7 +183,7 @@ Step by step, this will look something like this:
 ```
 
 
-## The compiler -- How does it work?
+The compiler -- How does it work?
 ---------------------------------------------------------------------------------------------------------------------
 tokeniser
 parser
@@ -191,23 +191,23 @@ compiler
 macho-builder
 
 
-### Brainfuck to x86-64 assembly
+### Brainfuck to x86-64 assembly ###
 TODO al, dx, rbp etc
 TODO show table of mapping
 
-#### Optimisations
+#### Optimisations ####
 
 addl
 reduce load stores
 reduce push and pops
 skipping comment loops
 
-### Creating a valid Mach-O executable
+### Creating a valid Mach-O executable ###
 TODO: header + load commands + file offset
 TODO: stricter
 
 
-## The executable image
+he executable image
 ---------------------------------------------------------------------------------------------------------------------
 A compiled Brainfuck program will have the following layout when loaded into memory. The `__PAGEZERO` segment is used 
 to catch null pointer exceptions; for our cause it's not really necessary, but as OS X has become stricter when 
