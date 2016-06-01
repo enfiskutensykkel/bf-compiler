@@ -253,7 +253,7 @@ Mach-O format, only with ELF. I started out by making a Mach-O parser and readin
 
 Reading Mach-O files was fairly simple. Creating them, on the other hand, was not. I came across a blogpost about
 making [minimal 64-bit executable](http://blog.softboysxp.com/post/7688131432/a-minimal-mach-o-x64-executable-for-os-x),
-but I could not make it to work. After digging for a long time, I finally came across a [Stack overflow](http://stackoverflow.com/questions/32453849/minimal-mach-o-64-binary) post saying that the evaluation of
+but I could not make it to work. After digging for a long time, I finally came across a [stackoverflow post](http://stackoverflow.com/questions/32453849/minimal-mach-o-64-binary) saying that the evaluation of
 Mach-O files had become stricter because of some security issue with iOS.
 
 This made me create a minimal C program instead, compile and link it and then use `otool` and my own Mach-O reader
@@ -303,12 +303,14 @@ byte operand which means that it cannot be larger than 4 GB.
              +---------------------+
 ```
 
+The beginning of the compiled code starts off by storing `rbx` and the stack pointer, then loading the address 
+of the data section into `rbp` and zeroing out `rax` and `rdx`. Each cell is considered one byte, and to be
+equivalent of `unsigned char` in C (meaning that arithmetic overflow is expected behaviour). There is no bounds
+checking, so the programmer must be aware that if the cell pointer goes below zero or above 2^16-1, it will cause
+an illegal memory access.
 
+If EOF is encountered in an input stream, the cell value will not change (_no-change_ in Brainfuck terms). This was
+the easiest to implement. Newlines and character set is also that of the host, so I do not convert `\r\n`.
 
-
-- exit code
-- no change on eof
-- no dynamic bounds
-- number of cells
-- cell width
-
+When the program terminates, `rbx` and the stack pointer is restored. The current cell value is copied into `rax` and
+the program will exit with that value as exit status.
