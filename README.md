@@ -310,13 +310,26 @@ byte operand which means that it cannot be larger than 4 GB.
 ```
 
 The beginning of the compiled code starts off by storing `rbx` and the stack pointer, then loading the address 
-of the data section into `rbp` and zeroing out `rax` and `rdx`. Each cell is considered one byte, and to be
-equivalent of `unsigned char` in C (meaning that arithmetic overflow is expected behaviour). There is no bounds
-checking, so the programmer must be aware that if the cell pointer goes below zero or above 2^16-1, it will cause
-an illegal memory access.
+of the data section into `rbp` and zeroing out `rax` and `rdx`. Output is implemented as the `write()` syscall,
+and input is implemented as the `read()` syscall. When the program terminates, `rbx` and the stack pointer is 
+restored. The current cell value is copied into `rax` and the program will exit with that value as exit status.
 
-If EOF is encountered in an input stream, the cell value will not change (_no-change_ in Brainfuck terms). This was
-the easiest to implement. Newlines and character set is also that of the host, so I do not convert `\r\n`.
 
-When the program terminates, `rbx` and the stack pointer is restored. The current cell value is copied into `rax` and
-the program will exit with that value as exit status.
+### Cell Width ###
+Each cell is considered one byte (8 bits) and to be equivalent of `unsigned char` in C. There are some Brainfuck 
+implementations that support signed values and even cells that are larger than one 8-bit byte, but for convenience
+this implementation only support one byte cells. 
+
+Cells should be expected to wrap around on arithmetic overflow.
+
+### Cell Array ###
+This implementation uses an array that consists of 2^16 - 1 cells. The cell pointer is initialised to 0, and 
+negative array index is not supported. No bounds checking is done during run-time, so the programmer must keep 
+track of where the cell pointer is. The cell pointer is likely to wrap on arithmetic, but this behaviour should
+not be expected.
+
+### End of File ###
+When EOF is encountered in an input stream, the cell value will not change (_no change_).
+
+### Charset and Newlines ###
+This implementation uses the host's character set and newline delimiter. `\r\n` is not converted.
