@@ -1,4 +1,4 @@
-Brainfuck compiler for Mac OS X
+Brainfuck compiler for Mac OS X 10.11 and newer
 =====================================================================================================================
 Compile Brainfuck programs to Mach-O executables for x86-64.
 
@@ -7,9 +7,11 @@ Compile Brainfuck programs to Mach-O executables for x86-64.
 I personally use the following:
 - LLVM version 7.0.2 (clang-700.1.81), which is Command Line Tools version 7.0.3
 - Mac OS X 10.11.4 (x86\_64-apple-darwin15.5.0)
+- BSD Make
 
 My guess is that it will work with older versions too, but you might have to tweak the version number for 
-`/usr/lib/libSystem.B.dylib` in the Mach-O output.
+`/usr/lib/libSystem.B.dylib` in the Mach-O output. It will only work for OS X 10.9 and newer because of how Apple 
+has deprecated the old `LC_UNIXTHREAD` load command and replaced it with the new `LC_MAIN` dynamic loader stuff.
 
 What is Brainfuck? 
 ---------------------------------------------------------------------------------------------------------------------
@@ -187,11 +189,20 @@ Step by step, this will look something like this:
 ```
 
 
-The compiler 
+Compiler Overview
 ---------------------------------------------------------------------------------------------------------------------
-The compiler consists of three parts, namely the **parser**, the **compiler** and the **Mach-O builder**.
+The compiler consists of three parts, namely the **parser**, the **compiler** and the **Mach-O builder**. The program
+starts 
 
-The responsibilities of the parser is to first tokenise the file. 
+The responsibilities of the parser is to first tokenise the file. This is done by reading the source file character
+by character and whenever a valid _token_ -- that is, a valid Brainfuck command character -- is encountered, it is
+inserted into a linked list. After all the tokens are read, the list of tokens (which I call _token string_ in my
+implementation) is passed to the parse function which does the following:
+  - Match `[` and `]` together (and make sure that all of them matches, otherwise it is a syntax error).
+  - Chain succeeding `+`, `-`, `<` and `>`commands and count them
+  - Figure out where it is necessary to do memory stores and loads
+
+After the parser has done its magic to the token string, it is passed to the _compiler_
 
 tokeniser
 parser
@@ -215,7 +226,7 @@ TODO: header + load commands + file offset
 TODO: stricter
 
 
-Executable image
+Executable Image Output
 ---------------------------------------------------------------------------------------------------------------------
 A compiled Brainfuck program will have the following layout when loaded into memory. The `__PAGEZERO` segment is used 
 to catch null pointer exceptions; for our cause it's not really necessary, but as OS X has become stricter when 
