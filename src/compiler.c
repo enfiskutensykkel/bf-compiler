@@ -50,13 +50,41 @@ static struct page* add_to_page(struct page* page, size_t page_size, size_t leng
 }
 
 
+static const struct token* find_chain_end(const struct token* current_token, uint32_t* offset, uint32_t max)
+{
+    const struct token* ptr = current_token;
+    uint32_t count = 1;
+
+    while (ptr->next != NULL && ptr->next->symbol == current_token->symbol)
+    {
+        ptr = ptr->next;
+        if (++count == max)
+        {
+            break;
+        }
+    }
+    
+    if (offset != NULL)
+    {
+        *offset = count;
+    }
+
+    return ptr;
+}
+
+
 static uint32_t calculate_loop_offset(const struct token* begin, const struct token* end, uint32_t offset)
 {
+    const struct token* token_chain;
+    uint32_t count;
+
     switch (begin->symbol)
     {
         case INCR_CELL:
         case DECR_CELL:
-            offset += 3;
+            token_chain = find_chain_end(begin, &count, 0xffff);
+            offset += count <= 0xff ? 4 : 5;
+            begin = token_chain;
             break;
 
         case INCR_DATA:
@@ -105,6 +133,7 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
 {
     struct page* curr_page = alloc_page(NULL, page_size);
     *page_list = curr_page;
+    const struct token* last_token;
 
     char byte_code[8];
     uint32_t addr = 0;
@@ -113,7 +142,7 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
     /* Save stack frame and point registers to data
      *
      *   al = working register
-     *  rbx = data base address
+     *  rbp = data base address
      *  rdx = current cell
      *  rsi = store stuff temporarily
      *
@@ -124,11 +153,11 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
      *  movq	%rsp		    ,	%rbx
      *  xorq	%rax		    ,	%rax
      *  movq	<data address>  ,	%rbp
-     *  movq	$0		        ,	%rdx
+     *  xorq	%rdx		    ,	%rdx
      */
     curr_page = add_to_page(curr_page, page_size, 12,"\x53\x55\x56\x57\x48\x89\xe3\x48\x31\xc0\x48\xbd");
     curr_page = add_to_page(curr_page, page_size, 8, (char*) &data_addr);
-    curr_page = add_to_page(curr_page, page_size, 7, "\x48\xc7\xc2\x00\x00\x00\x00");
+    curr_page = add_to_page(curr_page, page_size, 3, "\x48\x31\xd2");
 
     while (token_string != NULL && curr_page != NULL)
     {
@@ -136,18 +165,58 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
         {
             case INCR_CELL:
                 /*
-                 *  incw    %dx
+                 *  addw    <chain count>   ,   %dx
                  */
-                addr += 3;
-                curr_page = add_to_page(curr_page, page_size, 3, "\x66\xff\xc2");
+                last_token = find_chain_end(token_string, &offset, 0xffff);
+                if (offset <= 0xff)
+                {
+                    byte_code[0] = 0x66;
+                    byte_code[1] = 0x83;
+                    byte_code[2] = 0xc2;
+                    byte_code[3] = (uint8_t) offset;
+
+                    addr += 4;
+                    curr_page = add_to_page(curr_page, page_size, 4, byte_code);
+                }
+                else
+                {
+                    byte_code[0] = 0x66;
+                    byte_code[1] = 0x81;
+                    byte_code[2] = 0xc2;
+                    *((uint16_t*) (byte_code + 3)) = (uint16_t) offset;
+                    
+                    addr += 5;
+                    curr_page = add_to_page(curr_page, page_size, 5, byte_code);
+                }
+                token_string = last_token;
                 break;
 
             case DECR_CELL:
                 /*
-                 *  decw    %dx
+                 *  subw    <chain count>   ,   %dx
                  */
-                addr += 3;
-                curr_page = add_to_page(curr_page, page_size, 3, "\x66\xff\xca");
+                last_token = find_chain_end(token_string, &offset, 0xffff);
+                if (offset <= 0xff)
+                {
+                    byte_code[0] = 0x66;
+                    byte_code[1] = 0x83;
+                    byte_code[2] = 0xea;
+                    byte_code[3] = (uint8_t) offset;
+
+                    addr += 4;
+                    curr_page = add_to_page(curr_page, page_size, 4, byte_code);
+                }
+                else
+                {
+                    byte_code[0] = 0x66;
+                    byte_code[1] = 0x81;
+                    byte_code[2] = 0xea;
+                    *((uint16_t*) (byte_code + 3)) = (uint16_t) offset;
+                    
+                    addr += 5;
+                    curr_page = add_to_page(curr_page, page_size, 5, byte_code);
+                }
+                token_string = last_token;
                 break;
 
             case INCR_DATA:
@@ -247,8 +316,8 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
 
             case READ_DATA:
                 /*
-                 *  movq    $0x2000004   ,  %rax    # 3 = syscall read, 2000000 = UNIX/BSD mask
-                 *  movq    $0           ,  %rdi    # file number 1 = stdin
+                 *  movq    $0x2000003   ,  %rax    # 3 = syscall read, 2000000 = UNIX/BSD mask
+                 *  movq    $0           ,  %rdi    # file number 0 = stdin
                  *  leaq    (%rbp, %rdx) ,  %rsi    # move address of cell we're going to print
                  *  pushq   %rbp                    # save register
                  *  pushq   %rdx                    # save register
