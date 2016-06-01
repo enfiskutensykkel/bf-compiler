@@ -30,20 +30,6 @@ struct token
 };
 
 
-/* Modify cell value token
- *
- * Sub-class of struct token. Used to represent the '+' and '-' commands.
- */
-struct modify_data
-{
-    enum symbol    symbol; // either '+' or '-'
-    struct token*  next;   // pointer to succeeding token
-    size_t         size;   // sizeof(struct modify_data)
-    int            load;   // indicates that a memory load must preceed the data modification
-    int            store;  // indicates that a memory store must succeed the data modification
-};
-
-
 /* Loop token
  *
  * Sub-class of struct token. Used to represent the '[' command.

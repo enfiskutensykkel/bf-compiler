@@ -76,30 +76,21 @@ static const struct token* find_chain_end(const struct token* current_token, uin
 static uint32_t calculate_loop_offset(const struct token* begin, const struct token* end, uint32_t offset)
 {
     const struct token* token_chain;
-    uint32_t count;
 
     switch (begin->symbol)
     {
         case INCR_CELL:
         case DECR_CELL:
-            token_chain = find_chain_end(begin, &count, 0xffff);
-            offset += count <= 0xff ? 4 : 5;
+            token_chain = find_chain_end(begin, NULL, 0x7f);
+            offset += 4;
             begin = token_chain;
             break;
 
         case INCR_DATA:
         case DECR_DATA:
-            if (((const struct modify_data*) begin)->load)
-            {
-                offset += 4;
-            }
-
-            offset += 2;
-
-            if (((const struct modify_data*) begin)->store)
-            {
-                offset += 4;
-            }
+            token_chain = find_chain_end(begin, NULL, 0x7f);
+            offset += 5;
+            begin = token_chain;
             break;
 
         case WRITE_DATA:
@@ -143,8 +134,7 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
      *
      *   al = working register
      *  rbp = data base address
-     *  rdx = current cell
-     *  rsi = store stuff temporarily
+     *   dx = current cell offset
      *
      *  pushq 	%rbx
      *  pushq	%rbp
@@ -167,27 +157,16 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                 /*
                  *  addw    <chain count>   ,   %dx
                  */
-                last_token = find_chain_end(token_string, &offset, 0xffff);
-                if (offset <= 0xff)
-                {
-                    byte_code[0] = 0x66;
-                    byte_code[1] = 0x83;
-                    byte_code[2] = 0xc2;
-                    byte_code[3] = (uint8_t) offset;
+                last_token = find_chain_end(token_string, &offset, 0x7f);
 
-                    addr += 4;
-                    curr_page = add_to_page(curr_page, page_size, 4, byte_code);
-                }
-                else
-                {
-                    byte_code[0] = 0x66;
-                    byte_code[1] = 0x81;
-                    byte_code[2] = 0xc2;
-                    *((uint16_t*) (byte_code + 3)) = (uint16_t) offset;
-                    
-                    addr += 5;
-                    curr_page = add_to_page(curr_page, page_size, 5, byte_code);
-                }
+                byte_code[0] = 0x66;
+                byte_code[1] = 0x83;
+                byte_code[2] = 0xc2;
+                byte_code[3] = (uint8_t) offset;
+
+                curr_page = add_to_page(curr_page, page_size, 4, byte_code);
+
+                addr += 4;
                 token_string = last_token;
                 break;
 
@@ -195,72 +174,53 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                 /*
                  *  subw    <chain count>   ,   %dx
                  */
-                last_token = find_chain_end(token_string, &offset, 0xffff);
-                if (offset <= 0xff)
-                {
-                    byte_code[0] = 0x66;
-                    byte_code[1] = 0x83;
-                    byte_code[2] = 0xea;
-                    byte_code[3] = (uint8_t) offset;
+                last_token = find_chain_end(token_string, &offset, 0x7f);
 
-                    addr += 4;
-                    curr_page = add_to_page(curr_page, page_size, 4, byte_code);
-                }
-                else
-                {
-                    byte_code[0] = 0x66;
-                    byte_code[1] = 0x81;
-                    byte_code[2] = 0xea;
-                    *((uint16_t*) (byte_code + 3)) = (uint16_t) offset;
-                    
-                    addr += 5;
-                    curr_page = add_to_page(curr_page, page_size, 5, byte_code);
-                }
+                byte_code[0] = 0x66;
+                byte_code[1] = 0x83;
+                byte_code[2] = 0xea;
+                byte_code[3] = (uint8_t) offset;
+
+                curr_page = add_to_page(curr_page, page_size, 4, byte_code);
+
+                addr += 4;
                 token_string = last_token;
                 break;
 
             case INCR_DATA:
                 /*
-                 *  movb    (%rbp, %rdx) ,   %al            # load
-                 *  incb    %al                             # increment
-                 *  movb    %al          ,   (%rbp, %rdx)   # store
+                 *  addb    <value>      ,   (%rbp, %rdx)
                  */
-                if (((const struct modify_data*) token_string)->load)
-                {
-                    addr += 4;
-                    curr_page = add_to_page(curr_page, page_size, 4, "\x8a\x44\x15\x00");
-                }
+                last_token = find_chain_end(token_string, &offset, 0x7f);
 
-                addr += 2;
-                curr_page = add_to_page(curr_page, page_size, 2, "\xfe\xc0");
+                byte_code[0] = 0x80;
+                byte_code[1] = 0x44;
+                byte_code[2] = 0x15;
+                byte_code[3] = 0x00;
+                byte_code[4] = (uint8_t) offset;
 
-                if (((const struct modify_data*) token_string)->store)
-                {
-                    addr += 4;
-                    curr_page = add_to_page(curr_page, page_size, 4, "\x88\x44\x15\x00");
-                }
+                curr_page = add_to_page(curr_page, page_size, 5, byte_code);
+
+                addr += 5;
+                token_string = last_token;
                 break;
 
             case DECR_DATA:
                 /*
-                 *  movb    (%rbp, %rdx) ,   %al            # load
-                 *  decb    %al                             # decrement
-                 *  movb    %al          ,   (%rbp, %rdx)   # store
+                 *  subb    <value>      ,   (%rbp, %rdx)
                  */
-                if (((const struct modify_data*) token_string)->load)
-                {
-                    addr += 4;
-                    curr_page = add_to_page(curr_page, page_size, 4, "\x8a\x44\x15\x00");
-                }
+                last_token = find_chain_end(token_string, &offset, 0x7f);
 
-                addr += 2;
-                curr_page = add_to_page(curr_page, page_size, 2, "\xfe\xc8");
+                byte_code[0] = 0x80;
+                byte_code[1] = 0x6c;
+                byte_code[2] = 0x15;
+                byte_code[3] = 0x00;
+                byte_code[4] = (uint8_t) offset;
 
-                if (((const struct modify_data*) token_string)->store)
-                {
-                    addr += 4;
-                    curr_page = add_to_page(curr_page, page_size, 4, "\x88\x44\x15\x00");
-                }
+                curr_page = add_to_page(curr_page, page_size, 5, byte_code);
+
+                addr += 5;
+                token_string = last_token;
                 break;
 
             case LOOP_BEGIN:

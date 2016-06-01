@@ -33,14 +33,12 @@ static struct token* get_next_token(FILE* stream)
     {
         switch (byte)
         {
-            case INCR_DATA:
-            case DECR_DATA:
-                return create_token((enum symbol) byte, sizeof(struct modify_data));
-
             case LOOP_BEGIN:
             case LOOP_END:
                 return create_token((enum symbol) byte, sizeof(struct loop));
 
+            case INCR_DATA:
+            case DECR_DATA:
             case INCR_CELL:
             case DECR_CELL:
             case WRITE_DATA:
@@ -118,25 +116,11 @@ int parse(struct token* token_string)
 {
     struct token* curr_token = token_string;
     int64_t nest_count = 0;
-    int modified = 0;
     
     while (curr_token != NULL)
     {
         switch (curr_token->symbol)
         {
-            case INCR_DATA:
-            case DECR_DATA:
-                ((struct modify_data*) curr_token)->load = !modified;
-                ((struct modify_data*) curr_token)->store = 0;
-                modified = 1;
-
-                if (curr_token->next == NULL || curr_token->next->symbol != curr_token->symbol)
-                {
-                    ((struct modify_data*) curr_token)->store = 1;
-                    modified = 0;
-                }
-                break;
-
             case LOOP_BEGIN:
                 if (++nest_count >= INT64_MAX)
                 {
