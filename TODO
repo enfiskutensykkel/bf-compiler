@@ -1,0 +1,7 @@
+Reintroduce the load/store semantics in the tokens
+    - it is benificial when you do addb/subb more than 127 times
+    - movb + addb + movb *may* be more efficient than addb on memory address
+Implement proper word-sized addw and subw for moving the cell pointer around (right now it's only up to 127 times)
+Optimise away (in parser) redundant '+' and '-' (for example ++++--+ = +++ = addb 3)
+Optimise away (in parser) redundant '<' and '>'
+Make output buffer (that can be disabled with compiler flag)
