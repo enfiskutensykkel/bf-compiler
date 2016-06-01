@@ -4,10 +4,10 @@ Compile Brainfuck programs to x86-64 Mach-O executables for Mac OS X 10.11 and n
 
 
 ### Technical Requirements ###
-I personally use the following:
+I use the following:
 - LLVM version 7.0.2 (clang-700.1.81), which is Command Line Tools version 7.0.3
 - Mac OS X 10.11.4 (x86\_64-apple-darwin15.5.0)
-- BSD Make
+- GNU Make (I guess version is irrelevant)
 
 My guess is that it will work with older versions too, but you might have to tweak the version number for 
 `/usr/lib/libSystem.B.dylib` in the Mach-O output. It will only work for OS X 10.9 and newer because of how Apple 
