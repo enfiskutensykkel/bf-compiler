@@ -4,10 +4,14 @@ Compile Brainfuck programs to Mach-O executables for x86-64.
 
 
 ### Technical requirements ###
-TODO: version of Xcode, clang, and command-line-utils
+I personally use the following:
+- LLVM version 7.0.2 (clang-700.1.81), which is Command Line Tools version 7.0.3
+- Mac OS X 10.11.4 (x86\_64-apple-darwin15.5.0)
 
+My guess is that it will work with older versions too, but you might have to tweak the version number for 
+`/usr/lib/libSystem.B.dylib` in the Mach-O output.
 
-What is Brainfuck? -- Some background
+What is Brainfuck? 
 ---------------------------------------------------------------------------------------------------------------------
 [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck) is an extremely minimalistic, yet Turing-complete, programming
 language (so-called _esoteric_ programming language).  The main idea is to manipulate an array of **cells**, using
@@ -141,7 +145,7 @@ Step by step, this will look something like this:
 
     0     1     3     4        30k
  +-----+-----+-----+-----+~~~+-----+
- |   1 |   4 |   0 |   0 |...|   0 |    ]    Current cell is greater than 0 so we skip back to loop start
+ |   1 |   4 |   0 |   0 |...|   0 |    ]    Current cell is greater than 0, jump to loop start
  +-----+-----+-----+-----+~~~+-----+
     ^
    ptr
@@ -176,15 +180,19 @@ Step by step, this will look something like this:
 
     0     1     3     4        30k
  +-----+-----+-----+-----+~~~+-----+
- |   0 |   5 |   0 |   0 |...|   0 |    ]    Current cell is 0 so we skip the loop and terminate
+ |   0 |   5 |   0 |   0 |...|   0 |    ]    Current cell is 0, break out of loop
  +-----+-----+-----+-----+~~~+-----+
     ^
    ptr
 ```
 
 
-The compiler -- How does it work?
+The compiler 
 ---------------------------------------------------------------------------------------------------------------------
+The compiler consists of three parts, namely the **parser**, the **compiler** and the **Mach-O builder**.
+
+The responsibilities of the parser is to first tokenise the file. 
+
 tokeniser
 parser
 compiler
@@ -207,7 +215,7 @@ TODO: header + load commands + file offset
 TODO: stricter
 
 
-he executable image
+Executable image
 ---------------------------------------------------------------------------------------------------------------------
 A compiled Brainfuck program will have the following layout when loaded into memory. The `__PAGEZERO` segment is used 
 to catch null pointer exceptions; for our cause it's not really necessary, but as OS X has become stricter when 
