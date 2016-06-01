@@ -237,10 +237,16 @@ Then translating Brainfuck commands into assembly is just a matter of mapping co
 
 #### Optimisations ####
 I am currently in the process of attempting to make some optimisations in order to reduce the size of the
-executable. Currently, I have chained together `+` and `-` in order to reduce number of loads and stores.
-My next goal is to chain together succeeding increments and decrements and use `addq` and `subq` instead of
-repeating `inc` and `dec`. I will also look into the possibility for skipping so-called _comment loops_ by 
-checking if a cell _has_ to be zero.
+executable. Currently, I have chained together `+` and `-` in order to reduce number of loads and stores, 
+in addition to avoiding multiple `incb` or `decb` (instead I do `addb` and `subb`).
+I have also chained together succeeding '<' and '>' and use `subw` and `addw` to change the cell pointer.
+
+If I get time, I will also look into the possibility for skipping so-called _comment loops_ by checking if 
+a cell _has_ to be zero.
+
+One plan I do have is to store output in a buffer and flush on newline, and add the possibility to force
+flush on ever call to `write()` as an option to the compiler. I suspect that this will greatly improve the
+performance of programs that do extensive writing.
 
 
 ### Creating a valid Mach-O executable ###
