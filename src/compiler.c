@@ -103,11 +103,11 @@ static uint32_t calculate_loop_offset(const struct token* begin, const struct to
             break;
 
         case WRITE_DATA:
-            offset += 32;
+            offset += 30;
             break;
 
         case READ_DATA:
-            offset += 32;
+            offset += 30;
             break;
 
         case LOOP_BEGIN:
@@ -300,17 +300,15 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                  *  movq    $0x2000004   ,  %rax    # 4 = syscall write, 2000000 = UNIX/BSD mask
                  *  movq    $1           ,  %rdi    # file number 1 = stdout
                  *  leaq    (%rbp, %rdx) ,  %rsi    # move address of cell we're going to print
-                 *  pushq   %rbp                    # save register
                  *  pushq   %rdx                    # save register
                  *  movq    $1           ,  %rdx    # how many bytes
                  *  syscall
                  *  popq    %rdx
-                 *  popq    %rbp
                  */
-                addr += 32;
-                curr_page = add_to_page(curr_page, page_size, 32,
+                addr += 30;
+                curr_page = add_to_page(curr_page, page_size, 30,
                         "\x48\xc7\xc0\x04\x00\x00\x02\x48\xc7\xc7\x01\x00\x00\x00\x48\x8d"
-                        "\x74\x15\x00\x55\x52\x48\xc7\xc2\x01\x00\x00\x00\x0f\x05\x5a\x5d"
+                        "\x74\x15\x00\x52\x48\xc7\xc2\x01\x00\x00\x00\x0f\x05\x5a"
                         );
                 break;
 
@@ -319,17 +317,15 @@ int compile(const struct token* token_string, struct page** page_list, size_t pa
                  *  movq    $0x2000003   ,  %rax    # 3 = syscall read, 2000000 = UNIX/BSD mask
                  *  movq    $0           ,  %rdi    # file number 0 = stdin
                  *  leaq    (%rbp, %rdx) ,  %rsi    # move address of cell we're going to print
-                 *  pushq   %rbp                    # save register
                  *  pushq   %rdx                    # save register
                  *  movq    $1           ,  %rdx    # how many bytes
                  *  syscall
                  *  popq    %rdx
-                 *  popq    %rbp
                  */
-                addr += 32;
-                curr_page = add_to_page(curr_page, page_size, 32,
+                addr += 30;
+                curr_page = add_to_page(curr_page, page_size, 30,
                         "\x48\xc7\xc0\x03\x00\x00\x02\x48\xc7\xc7\x00\x00\x00\x00\x48\x8d"
-                        "\x74\x15\x00\x55\x52\x48\xc7\xc2\x01\x00\x00\x00\x0f\x05\x5a\x5d"
+                        "\x74\x15\x00\x52\x48\xc7\xc2\x01\x00\x00\x00\x0f\x05\x5a"
                         );
                 break;
         }
