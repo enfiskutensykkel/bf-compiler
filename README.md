@@ -1,9 +1,9 @@
-Brainfuck compiler for Mac OS X 10.11 and newer
+Brainfuck compiler for Mac OS X
 =====================================================================================================================
-Compile Brainfuck programs to Mach-O executables for x86-64.
+Compile Brainfuck programs to x86-64 Mach-O executables for Mac OS X 10.11 and newer.
 
 
-### Technical requirements ###
+### Technical Requirements ###
 I personally use the following:
 - LLVM version 7.0.2 (clang-700.1.81), which is Command Line Tools version 7.0.3
 - Mac OS X 10.11.4 (x86\_64-apple-darwin15.5.0)
@@ -37,7 +37,7 @@ I/O of the current cell and a simple loop structure. Non-command characters are 
 |   `]`   | If the cell value is **not** zero, jump back to the command after the matching `[` | `}`                 |
 
 
-### Example program ###
+### Example Program ###
 The following Brainfuck code adds 2 and 3
 ```brainfuck
 ++       set cell 0 to 2
@@ -202,28 +202,69 @@ implementation) is passed to the parse function which does the following:
   - Chain succeeding `+`, `-`, `<` and `>`commands and count them
   - Figure out where it is necessary to do memory stores and loads
 
-After the parser has done its magic to the token string, it is passed to the _compiler_
+After the parser has done its magic to the token string, it is passed to the _compiler_. The compiler is responsible
+for converting the parsed token string into x86-64 machine code and writing it to page-sized buffers, allocated on 
+demand. I use buffers that are aligned with pages because it is simple.
 
-tokeniser
-parser
-compiler
-macho-builder
-
+The buffers are then finally passed to the Macho-O builder, which essentially writes the Mach-O header to file along
+with the necessary load commands and finally the compiled code.
 
 ### Brainfuck to x86-64 assembly ###
-TODO al, dx, rbp etc
-TODO show table of mapping
+Translating Brainfuck to simple assembly is trivial. The following registers is used for the purposes listed:
+
+| Register | Width   | Meaning                                                                               |
+|----------|---------|---------------------------------------------------------------------------------------|
+|     `al` | 1 byte  | Working register, used to increment and decrement cell value                          |
+|    `rbp` | 8 bytes | Store the address of the beginning of the data segment (0x1000000000)                 |
+|     `dx` | 2 bytes | Represents the current cell pointer. The current cell is retrieved with (`rbp`+`rdx`) |
+|    `rbx` | 8 bytes | Holds the base stack pointer, because of calling convention (aka _not used_)          |
+|    `rsi` | 8 bytes | Used for `write()` and `read()` syscalls                                              |
+|    `rdi` | 8 bytes | Used for `write()` and `read()` syscalls                                              |
+
+Then translating Brainfuck commands into assembly is just a matter of mapping commands to opcodes and operands.
+
+| Command | GNU Assembly (AT&T)                                                                    |
+|---------|----------------------------------------------------------------------------------------|
+|   `<`   | `decw %dx`                                                                             |
+|   `>`   | `incw %dx`                                                                             |
+|   `+`   | `movb (%rbp, %rdx), %al`; `incb %al`; `movb %al, (%rbp, %rdx)`                         |
+|   `-`   | `movb (%rbp, %rdx), %al`; `decb %al`; `movb %al, (%rbp, %rdx)`                         |
+|   `[`   | `movb (%rbp, %rdx), %al`; `cmpb $0, %al`; `je <4-byte offset>`                         |
+|   `]`   | `jmp <4-byte offset>`                                                                  |
+|   `.`   | `movq $4, %rax`; `movq $1, %rdi`; `leaq (%rbp,%rdx), %rsi`; `pushq %rdx`; `movq $1, %rdx`; `syscall`; `popq %rdx` |
+|   `,`   | `movq $3, %rax`; `movq $0, %rdi`; `leaq (%rbp,%rdx), %rsi`; `pushq %rdx`; `movq $1, %rdx`; `syscall`; `popq %rdx` |
+
 
 #### Optimisations ####
+I am currently in the process of attempting to make some optimisations in order to reduce the size of the
+executable. Currently, I have chained together `+` and `-` in order to reduce number of loads and stores.
+My next goal is to chain together succeeding increments and decrements and use `addq` and `subq` instead of
+repeating `inc` and `dec`. I will also look into the possibility for skipping so-called _comment loops_ by 
+checking if a cell _has_ to be zero.
 
-addl
-reduce load stores
-reduce push and pops
-skipping comment loops
 
 ### Creating a valid Mach-O executable ###
-TODO: header + load commands + file offset
-TODO: stricter
+I had a hard time figuring out why my initial attempts at creating a valid Mach-O file did not work. The command 
+line tools are extremely handy, but they do only minimal evaluation. When I first started, I was not familiar with the
+Mach-O format, only with ELF. I started out by making a Mach-O parser and reading [this link](http://lowlevelbits.org/parse-mach-o-files/) about it. Basically, it is a very simple format with a 
+**Mach header**, a series of variable sized **load commands** and then followed by data.
+
+![Mach-O memory layout](http://lowlevelbits.org/images/parse-mach-o-files/macho_memory_layout.png)
+
+Reading Mach-O files was fairly simple. Creating them, on the other hand, was not. I came across a blogpost about
+making [minimal 64-bit executable](http://blog.softboysxp.com/post/7688131432/a-minimal-mach-o-x64-executable-for-os-x),
+but I could not make it to work. After digging for a long time, I finally came across a [Stack overflow](http://stackoverflow.com/questions/32453849/minimal-mach-o-64-binary) post saying that the evaluation of
+Mach-O files had become stricter because of some security issue with iOS.
+
+This made me create a minimal C program instead, compile and link it and then use `otool` and my own Mach-O reader
+to just copy load commands one by one until it worked. What I found out was that the following load commands are 
+necessary for creating a valid executable:
+  - `__PAGEZERO` segment to handle null pointer exceptions (I do not know why it is necessary, just that it is)
+  - `__TEXT` segment (with corresponding `__text` segment)
+  - an `LC_MAIN` command, telling the the dynamic loader (dyld) where in the file to look for `main()`
+  - an `LC_LOAD_DYLINKER` command, telling the kernel which dynamic loader to use (in my case, `/usr/lib/dyld`)
+  - an `LC_LOAD_DYLIB` command indicating where dyld can find libc (I guess it is necessary for some reason?)
+  - an `LC_DYLD_INFO_ONLY` command, with all fields set to zero, so that dyld does not try to do anything "clever"
 
 
 Executable Image Output
