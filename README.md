@@ -227,8 +227,8 @@ Then translating Brainfuck commands into assembly is just a matter of mapping co
 |---------|----------------------------------------------------------------------------------------|
 |   `<`   | `decw %dx`                                                                             |
 |   `>`   | `incw %dx`                                                                             |
-|   `+`   | `movb (%rbp, %rdx), %al`; `incb %al`; `movb %al, (%rbp, %rdx)`                         |
-|   `-`   | `movb (%rbp, %rdx), %al`; `decb %al`; `movb %al, (%rbp, %rdx)`                         |
+|   `+`   | `incb (%rbp, %rdx)`                                                                    |
+|   `-`   | `incb (%rbp, %rdx)`                                                                    |
 |   `[`   | `movb (%rbp, %rdx), %al`; `cmpb $0, %al`; `je <4-byte offset>`                         |
 |   `]`   | `jmp <4-byte offset>`                                                                  |
 |   `.`   | `movq $4, %rax`; `movq $1, %rdi`; `leaq (%rbp,%rdx), %rsi`; `pushq %rdx`; `movq $1, %rdx`; `syscall`; `popq %rdx` |
