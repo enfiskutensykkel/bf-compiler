@@ -257,10 +257,22 @@ int write_executable(FILE* output_file, struct page* page_list, size_t page_size
     text_section->nreloc = 0;
     text_section->flags = S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS;
 
+    // Create linkedit segment
+    struct segment_command_64* linkedit = create_segment(header, SEG_LINKEDIT, NULL);
+    linkedit->fileoff = text_segment->fileoff + text_segment->filesize;
+    linkedit->filesize = 0;
+
     // Create dynamic loader stuff
     struct dyld_info_command* dyldinfo = create_dyld_info(header);
     struct dylinker_command* dyld = create_dyld(header);
     struct dylib_command* dylib = create_dylib(header);
+
+    struct dysymtab_command dysymtab;
+    memset(&dysymtab, 0, sizeof(dysymtab));
+    dysymtab.cmd = LC_DYSYMTAB;
+    dysymtab.cmdsize = sizeof(dysymtab);
+    header->ncmds++;
+    header->sizeofcmds += dysymtab.cmdsize;
 
     struct entry_point_command entry_point;
     entry_point.cmd = LC_MAIN;
@@ -277,7 +289,9 @@ int write_executable(FILE* output_file, struct page* page_list, size_t page_size
     write_load_command(null_segment, output_file);
     write_load_command(data_segment, output_file);
     write_load_command(text_segment, output_file);
+    write_load_command(linkedit, output_file);
     write_load_command(dyldinfo, output_file);
+    write_load_command(&dysymtab, output_file);
     write_load_command(dyld, output_file);
     write_load_command(dylib, output_file);
     write_load_command(&entry_point, output_file);
@@ -286,6 +300,7 @@ int write_executable(FILE* output_file, struct page* page_list, size_t page_size
     free(header);
     free(null_segment);
     free(text_segment);
+    free(linkedit);
     free(data_segment);
     free(dyldinfo);
     free(dyld);

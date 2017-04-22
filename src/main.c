@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
+#include <unistd.h>
 #include "parser.h"
 #include "compiler.h"
 #include "macho.h"
@@ -34,8 +35,16 @@ int main(int argc, char** argv)
     int status;
     struct token* token_string = NULL;
     struct page* page_list = NULL;
+    long page_size;
 
     // TODO: Rewrite main to support options and stopping at different stages
+    
+    page_size = sysconf(_SC_PAGESIZE);
+    if (page_size < 0)
+    {
+        fprintf(stderr, "Failed to get system page size\n");
+        return 2;
+    }
     
     if (argc != 3)
     {
@@ -69,7 +78,7 @@ int main(int argc, char** argv)
     }
 
     // Compile tokens to bytecode
-    status = compile(token_string, &page_list, PAGE_SIZE, DATA_ADDR);
+    status = compile(token_string, &page_list, page_size, DATA_ADDR);
     if (status < 0)
     {
         free_page_list(page_list);
@@ -86,7 +95,7 @@ int main(int argc, char** argv)
     }
 
     // Write Mach-O executable
-    status = write_executable(stream, page_list, PAGE_SIZE, DATA_ADDR, TEXT_ADDR);
+    status = write_executable(stream, page_list, page_size, DATA_ADDR, TEXT_ADDR);
     if (status < 0)
     {
         fclose(stream);
