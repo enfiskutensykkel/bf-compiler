@@ -1,4 +1,4 @@
-Brainfuck compiler for Mac OS X
+Brainfuck compiler for macOS / OS X
 =====================================================================================================================
 Compile Brainfuck programs to x86-64 Mach-O executables for Mac OS X 10.11 and newer.
 
@@ -12,6 +12,8 @@ I use the following:
 My guess is that it will work with older versions too, but you might have to tweak the version number for 
 `/usr/lib/libSystem.B.dylib` in the Mach-O output. It will only work for OS X 10.9 and newer because of how Apple 
 has deprecated the old `LC_UNIXTHREAD` load command and replaced it with the new `LC_MAIN` dynamic loader stuff.
+
+The most recent I've tested it is with macOS 10.12.3 (Sierra).
 
 What is Brainfuck? 
 ---------------------------------------------------------------------------------------------------------------------
