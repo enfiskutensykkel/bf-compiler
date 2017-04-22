@@ -6,3 +6,4 @@ Optimise away (in parser) redundant '+' and '-' (for example ++++--+ = +++ = add
 Optimise away (in parser) redundant '<' and '>'
 Make output buffer (that can be disabled with compiler flag)
 Optimise away uncessessary loops (comment loops) where the cell value is known to be zero
+Missing load commands for newer versions of OS X / macOS
