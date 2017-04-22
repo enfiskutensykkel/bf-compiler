@@ -5,7 +5,8 @@ Compile Brainfuck programs to x86-64 Mach-O executables for Mac OS X 10.11 and n
 
 ### Technical Requirements ###
 I use the following:
-- LLVM version 7.0.2 (clang-700.1.81), which is Command Line Tools version 7.0.3
+- At least LLVM version 7.0.2 (clang-700.1.81), which is Command Line Tools version 7.0.3.
+  I also tested it with LLVM version 8.1.0 (clang-802.0.38) (CLT version 8.3.0) and it works with that too.
 - Mac OS X 10.11.4 (x86\_64-apple-darwin15.5.0)
 - GNU Make (I guess version is irrelevant)
 
@@ -13,7 +14,7 @@ My guess is that it will work with older versions too, but you might have to twe
 `/usr/lib/libSystem.B.dylib` in the Mach-O output. It will only work for OS X 10.9 and newer because of how Apple 
 has deprecated the old `LC_UNIXTHREAD` load command and replaced it with the new `LC_MAIN` dynamic loader stuff.
 
-The most recent I've tested it is with macOS 10.12.3 (Sierra).
+Also tested on macOS 10.12.3 and 10.12.4 (Sierra).
 
 What is Brainfuck? 
 ---------------------------------------------------------------------------------------------------------------------
