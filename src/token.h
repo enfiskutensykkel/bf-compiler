@@ -32,14 +32,24 @@ struct token
 
 /* Loop token
  *
- * Sub-class of struct token. Used to represent the '[' command.
+ * Sub-class of struct token. Used to represent the '[' or ']' command.
  */
 struct loop
 {
-    enum symbol     symbol; // '['
+    enum symbol     symbol; // '[' or ']'
     struct token*   next;   // pointer to succeeding token
     size_t          size;   // sizeof(struct loop)
     struct token*   match;  // pointer to the matching ']' token
+};
+
+
+/* Move cell pointer token */
+struct move
+{
+    enum symbol     symbol; // '<' or '>'
+    struct token*   next;   // pointer to next token
+    size_t          size;   // sizeof(struct move)
+    int             count;  // number of times to move
 };
 
 #endif

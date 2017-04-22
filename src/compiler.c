@@ -52,6 +52,7 @@ static struct page* add_to_page(struct page* page, size_t page_size, size_t leng
 
 static const struct token* find_chain_end(const struct token* current_token, uint32_t* offset, uint32_t max)
 {
+    // TODO: Rewrite only to return the chain end
     const struct token* ptr = current_token;
     uint32_t count = 1;
 

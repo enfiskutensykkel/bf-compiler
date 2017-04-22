@@ -112,6 +112,37 @@ static struct token* find_loop_end(struct token* token, size_t loop_stack)
 }
 
 
+static struct token* calculate_move_chain(struct move* token)
+{
+    struct token* curr_token = (struct token*) token; 
+    struct token* prev_token = NULL;
+    int move = 0;
+
+    while (curr_token != NULL)
+    {
+        switch (curr_token->symbol)
+        {
+            case INCR_CELL:
+                ++move;
+
+                break;
+                
+            case DECR_CELL:
+                --move;
+                break;
+
+            default:
+                return prev_token;
+        }
+
+        prev_token = curr_token;
+        curr_token = curr_token->next;
+    }
+
+    return NULL;
+}
+
+
 int parse(struct token* token_string)
 {
     struct token* curr_token = token_string;
