@@ -255,7 +255,7 @@ line tools are extremely handy, but they do only minimal evaluation. When I firs
 Mach-O format, only with ELF. I started out by making a Mach-O parser and reading [this link](http://lowlevelbits.org/parse-mach-o-files/) about it. Basically, it is a very simple format with a 
 **Mach header**, a series of variable sized **load commands** and then followed by data.
 
-![Mach-O memory layout](http://lowlevelbits.org/images/parse-mach-o-files/macho_memory_layout.png)
+![Mach-O memory layout](https://lowlevelbits.org/images/parse-mach-o-files/macho_memory_layout.png)
 
 Reading Mach-O files was fairly simple. Creating them, on the other hand, was not. I came across a blogpost about
 making [minimal 64-bit executable](http://blog.softboysxp.com/post/7688131432/a-minimal-mach-o-x64-executable-for-os-x),
@@ -267,10 +267,12 @@ to just copy load commands one by one until it worked. What I found out was that
 necessary for creating a valid executable:
   - `__PAGEZERO` segment to handle null pointer exceptions (I do not know why it is necessary, just that it is)
   - `__TEXT` segment (with corresponding `__text` segment)
+  - `__LINKEDIT` segment (zero size)
   - an `LC_MAIN` command, telling the the dynamic loader (dyld) where in the file to look for `main()`
   - an `LC_LOAD_DYLINKER` command, telling the kernel which dynamic loader to use (in my case, `/usr/lib/dyld`)
   - an `LC_LOAD_DYLIB` command indicating where dyld can find libc (I guess it is necessary for some reason?)
   - an `LC_DYLD_INFO_ONLY` command, with all fields set to zero, so that dyld does not try to do anything "clever"
+  - an `LC_DYSYMTAB` command, also with all fields set to zero
 
 
 Executable Image Output
@@ -333,3 +335,4 @@ When EOF is encountered in an input stream, the cell value will not change (_no 
 
 ### Charset and Newlines ###
 This implementation uses the host's character set and newline delimiter. `\r\n` is not converted.
+
