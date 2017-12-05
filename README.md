@@ -268,11 +268,11 @@ This made me create a minimal C program instead, compile and link it and then us
 to just copy load commands one by one until it worked. What I found out was that the following load commands are 
 necessary for creating a valid executable:
   - `__PAGEZERO` segment to handle null pointer exceptions (I do not know why it is necessary, just that it is)
-  - `__TEXT` segment (with corresponding `__text` segment)
+  - `__TEXT` segment (with corresponding `__text` section)
   - `__LINKEDIT` segment (zero size)
   - an `LC_MAIN` command, telling the the dynamic loader (dyld) where in the file to look for `main()`
   - an `LC_LOAD_DYLINKER` command, telling the kernel which dynamic loader to use (in my case, `/usr/lib/dyld`)
-  - an `LC_LOAD_DYLIB` command indicating where dyld can find libc (I guess it is necessary for some reason?)
+  - an `LC_LOAD_DYLIB` command indicating where dyld can find libc (do not know why this is necessary?)
   - an `LC_DYLD_INFO_ONLY` command, with all fields set to zero, so that dyld does not try to do anything "clever"
   - an `LC_DYSYMTAB` command, also with all fields set to zero
 
@@ -281,17 +281,17 @@ Executable Image Output
 ---------------------------------------------------------------------------------------------------------------------
 A compiled Brainfuck program will have the following layout when loaded into memory. The `__PAGEZERO` segment is used 
 to catch null pointer exceptions; for our cause it's not really necessary, but as OS X has become stricter when 
-evaluating Mach-O executables, it is expected. The protection level for this segment is set to no access. 
+evaluating Mach-O executables, it is expected by the loader. The protection level for this segment is set to no access. 
 
 The `__DATA` segment and the `__data` section is empty on disk, but the load command for the section instructs the 
 loader to reserve 2^16-1 bytes of memory for program data and to zero it out. There are two reasons for using a 
-2^16-1 sized cell array (rather than "just" the 30,000). Reason one is that it is easier to align, as it is 
+2^16-1 sized cell array (rather than "just" the 30,000). Reason one is that it is easier to deal with for me, as it is 
 page-aligned. Reason two is that even though Brainfuck programs should not expect the array to be larger than 30,000
 cells, there are many that ignore this. In order to ensure that most Brainfuck programs would compile and run, 
-chose a size that was at least twice the minimum amount of cells.
+it was helpful to choose a size that was larger than the minimum amount of cells.
 
 The `__TEXT` segment and the corresponding `__text` section contains the actual opcodes that is ran. There is no 
-restrictions on how large this section can be, except that my implementation uses JUMP opcodes that accept a four 
+restrictions on how large this section can be. My implementation, however, uses JUMP opcodes that accept a four 
 byte operand which means that it cannot be larger than 4 GB.
 
 ```
