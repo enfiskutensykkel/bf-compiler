@@ -274,6 +274,13 @@ int write_executable(FILE* output_file, struct page* page_list, size_t page_size
     header->ncmds++;
     header->sizeofcmds += dysymtab.cmdsize;
 
+    struct symtab_command symtab;
+    memset(&symtab, 0, sizeof(symtab));
+    symtab.cmd = LC_SYMTAB;
+    symtab.cmdsize = sizeof(symtab);
+    header->ncmds++;
+    header->sizeofcmds += symtab.cmdsize;
+
     struct entry_point_command entry_point;
     entry_point.cmd = LC_MAIN;
     entry_point.cmdsize = sizeof(struct entry_point_command);
@@ -294,6 +301,7 @@ int write_executable(FILE* output_file, struct page* page_list, size_t page_size
     write_load_command(&dysymtab, output_file);
     write_load_command(dyld, output_file);
     write_load_command(dylib, output_file);
+    write_load_command(&symtab, output_file);
     write_load_command(&entry_point, output_file);
 
     // Free resources
